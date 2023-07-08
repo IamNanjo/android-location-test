@@ -157,13 +157,13 @@ class MainActivity : AppCompatActivity() {
         lastKnownLocationByGps?.let {
             locationByGps = lastKnownLocationByGps
         }
-//------------------------------------------------------//
+
         val lastKnownLocationByNetwork =
             locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
         lastKnownLocationByNetwork?.let {
             locationByNetwork = lastKnownLocationByNetwork
         }
-//------------------------------------------------------//
+
         if (locationByGps != null && locationByNetwork != null) {
             currentLocation = if (locationByGps!!.accuracy > locationByNetwork!!.accuracy) {
                 locationByGps
@@ -175,17 +175,28 @@ class MainActivity : AppCompatActivity() {
         return currentLocation
     }
 
+    fun updateSharedText() {
+        val textView: TextView? = findViewById(R.id.textview_first)
+        if (textView != null) {
+            textView.text = getSharedText() ?: "No shared text"
+        }
+    }
+
+    fun updateLocationText() {
+        val textView: TextView? = findViewById(R.id.textview_second)
+        val location: Location? = getLocation()
+        if (textView != null) {
+            if (location != null) textView.text =
+                "Latitude: ${location.latitude}\nLongitude: ${location.longitude}"
+            else textView.text = "Unknown location"
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        var sharedText = getSharedText()
-        if (sharedText == null) sharedText = "Nothing shared"
+        updateSharedText()
 
         getLocationPermission()
         setLocationManager()
-        val location = getLocation()
-        var locationText = "Unknown location"
-
-        if (location != null) locationText =
-            "Latitude: ${location.latitude}\nLongitude: ${location.longitude}"
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
@@ -199,14 +210,9 @@ class MainActivity : AppCompatActivity() {
         appBarConfiguration = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfiguration)
 
-        binding.fab.setOnClickListener { view ->
-            view.id
-            var textView: TextView? = findViewById(R.id.textview_first)
-            if (textView != null) textView.text = sharedText
-            if (textView == null) {
-                textView = findViewById(R.id.textview_second)
-                if (textView != null) textView.text = locationText
-            }
+        binding.fab.setOnClickListener {
+            updateSharedText()
+            updateLocationText()
         }
     }
 
