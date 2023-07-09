@@ -182,7 +182,23 @@ class MainActivity : AppCompatActivity() {
 
         return currentLocation
     }
-
+    fun lahinpiste(): Int { //foreach komennolla katsotaan lähin piste omaan sijaintiin
+        var etaisuus = 0
+        var lahinpiste = 0 //listan indeksi
+        var lahinpistex = 0 // väliaikainen arvon määritystä varten
+        val omap = getLocation()
+        val pisteet = parsegpx()
+        for (xy in pisteet) {
+            val etpist = location.distanceBetween(omap.latitude, omap.longitude, xy.latitude, xy.longitude)
+            if (etaisuus == 0 || etaisuus > etpist) {
+                etaisuus = etpist
+                )
+                lahinpiste = lahinpistex
+            }
+            lahinpistex++
+        }
+    return (lahinpiste)
+    }
     fun updateSharedText() {
         val textView: TextView? = findViewById(R.id.textview_first)
         if (textView != null) {
