@@ -7,19 +7,21 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.view.WindowCompat
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
-import android.view.Menu
-import android.view.MenuItem
-import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
 import tech.nanjo.locationtestversion2.databinding.ActivityMainBinding
+import java.io.BufferedReader
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,16 +29,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var locationManager: LocationManager
 
-    private fun getSharedText(): String? {
-        val receivedIntent = intent
-        val receivedAction = receivedIntent.action
-        val receivedType = receivedIntent.type
+    private fun getSharedFile(): String? {
+        val receivedAction = intent.action
 
         if (receivedAction.equals(Intent.ACTION_SEND)) {
-            if (receivedType != null) {
-                if (receivedType.startsWith("text/")) {
-                    return receivedIntent
-                        .getStringExtra(Intent.EXTRA_TEXT)
+            val receivedUri = if (android.os.Build.VERSION.SDK_INT >= 33) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            }
+
+            if (receivedUri != null && receivedUri.path != null) {
+                val inputStream = contentResolver.openInputStream(receivedUri)
+                if (inputStream != null) {
+                    val content = inputStream.bufferedReader().use(BufferedReader::readText)
+                    inputStream.close()
+                    return content
                 }
             }
         }
@@ -178,7 +186,7 @@ class MainActivity : AppCompatActivity() {
     fun updateSharedText() {
         val textView: TextView? = findViewById(R.id.textview_first)
         if (textView != null) {
-            textView.text = getSharedText() ?: "No shared text"
+            textView.text = getSharedFile() ?: "No shared text"
         }
     }
 
