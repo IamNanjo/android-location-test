@@ -9,6 +9,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.TextView
@@ -20,14 +21,18 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
 import tech.nanjo.locationtestversion2.databinding.ActivityMainBinding
 import java.io.BufferedReader
+import java.io.StringReader
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
     private lateinit var locationManager: LocationManager
+    private lateinit var currentRouteName: String
 
     private fun getSharedFile(): String? {
         val receivedAction = intent.action
@@ -50,6 +55,53 @@ class MainActivity : AppCompatActivity() {
         }
 
         return null
+    }
+
+    private fun parseGpx(): ArrayList<Location> {
+        val result = ArrayList<Location>()
+        val xml = getSharedFile()
+
+        if (xml != null) {
+            val factory = XmlPullParserFactory.newInstance()
+            factory.isNamespaceAware = true
+            val xpp = factory.newPullParser()
+
+            xpp.setInput(StringReader(xml))
+
+            var event = xpp.eventType
+            var isReadingName = false
+
+            while (event != XmlPullParser.END_DOCUMENT) {
+                if (event == XmlPullParser.START_TAG) {
+                    if (xpp.name == "metadata") {
+                        // Skip metadata
+                        xpp.next()
+                        xpp.next()
+                        xpp.next()
+                    }
+
+                    if (xpp.name == "rtept") {
+                        val location = Location(null)
+                        location.latitude = xpp.getAttributeValue(0).toDouble()
+                        location.longitude = xpp.getAttributeValue(1).toDouble()
+                        result.add(location)
+                    } else if (xpp.name == "name") {
+                        isReadingName = true
+                    }
+                }
+
+                if (event == XmlPullParser.TEXT && isReadingName) {
+                    currentRouteName = xpp.text
+                    isReadingName = false
+                }
+
+                event = xpp.next()
+            }
+
+            Log.d("parseGpx", "Route name: $currentRouteName")
+        }
+
+        return result
     }
 
     private fun getLocationPermission(): Boolean {
@@ -182,23 +234,44 @@ class MainActivity : AppCompatActivity() {
 
         return currentLocation
     }
+
     fun lahinpiste(): Int { //foreach komennolla katsotaan lähin piste omaan sijaintiin
-        var etaisuus = 0
+        var etaisuus = 0f
         var lahinpiste = 0 //listan indeksi
         var lahinpistex = 0 // väliaikainen arvon määritystä varten
         val omap = getLocation()
-        val pisteet = parsegpx()
-        for (xy in pisteet) {
-            val etpist = location.distanceBetween(omap.latitude, omap.longitude, xy.latitude, xy.longitude)
-            if (etaisuus == 0 || etaisuus > etpist) {
-                etaisuus = etpist
+        val pisteet = parseGpx()
+
+        if (omap != null) {
+            for (xy in pisteet) {
+                val lista = FloatArray(3)
+
+                Location.distanceBetween(
+                    omap.latitude,
+                    omap.longitude,
+                    xy.latitude,
+                    xy.longitude,
+                    lista
                 )
-                lahinpiste = lahinpistex
+
+                /*
+                    Listan sisältö:
+                    lista[0]: Etäisyys
+                    lista[1]: Alkuperäinen suunta
+                    lista[2]: Lopullinen suunta
+                */
+
+                val etpist = lista[0]
+                if ((etaisuus == 0f) || (etaisuus > etpist)) {
+                    etaisuus = etpist
+                    lahinpiste = lahinpistex
+                }
+                lahinpistex++
             }
-            lahinpistex++
         }
-    return (lahinpiste)
+        return (lahinpiste)
     }
+
     fun updateSharedText() {
         val textView: TextView? = findViewById(R.id.textview_first)
         if (textView != null) {
@@ -218,9 +291,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         updateSharedText()
-
         getLocationPermission()
         setLocationManager()
+
+        parseGpx()
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
