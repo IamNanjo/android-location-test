@@ -271,7 +271,29 @@ class MainActivity : AppCompatActivity() {
         }
         return (lahinpiste)
     }
+// kun puhelimesta laittaa pilotin päälle, käynnisty uusi säie
+    // input: sijainti, reitti, lähin reitin pisteen indeksi ja reitin suunta eikun ei, koska sen pitää kutsua uusia arvoja koko ajan
 
+
+    fun pilot() {
+        Thread(Runnable {
+
+            // kun lista on annettu, pitää laittaa erillinen nappi näyttöön myöhemmin
+            while (true) {
+                val pisteet = parseGpx()
+                val indeksi = lahinpiste()
+                val sijainti = getLocation()
+                val suunta = sijainti?.bearingTo(pisteet[indeksi]) // suunta pitäisi saada näytölle testaamista varten
+
+                }
+                Thread.sleep(1000)
+        }).start()
+            //pitää sisällä bluetoothin lähetyksen ja kaiken lähetettävän käsittelyn
+            //while () pitää lisätä pilotin päällä pitävä osa
+            //var sijainti = getLocation()
+            //var reitti = parseGpx()
+            //var lahindex = lahinpiste() //indeksi
+    }
     fun updateSharedText() {
         val textView: TextView? = findViewById(R.id.textview_first)
         if (textView != null) {
